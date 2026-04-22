@@ -1,73 +1,135 @@
-<script>
-  let sonKisaUrl = "";
-
-  async function kisalt() {
-    const urlInput = document.getElementById("url");
-    const url = urlInput.value.trim();
-    if (!url) return;
-
-    const res = await fetch("/kisalt", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url })
-    });
-
-    const veri = await res.json();
-    if (veri.hata) return alert(veri.hata);
-
-    sonKisaUrl = veri.kisa_url;
-    const kutu = document.getElementById("sonuc-kutu");
-    const link = document.getElementById("sonuc-url");
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkShorter | Selçuk Özkurt</title>
+    <link rel="icon" href="data:,">
     
-    if (kutu && link) {
-      kutu.classList.remove("gizli");
-      kutu.style.display = "flex"; // Garantiye alalım
-      link.href = sonKisaUrl;
-      link.textContent = sonKisaUrl;
-    }
-    urlInput.value = "";
-    listele();
-  }
+    <style>
+        /* Buraya senin mevcut CSS kodlarını ( * { margin: 0... } ) yapıştır */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0f0f0f;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 60px 20px;
+        }
+        .kart { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 16px; padding: 40px; width: 100%; max-width: 600px; }
+        h1 { font-size: 28px; font-weight: 600; margin-bottom: 8px; color: #ffffff; }
+        .alt-baslik { font-size: 14px; color: #666; margin-bottom: 32px; }
+        .input-grup { display: flex; gap: 10px; margin-bottom: 16px; }
+        input { flex: 1; background: #0f0f0f; border: 1px solid #2a2a2a; border-radius: 10px; padding: 12px 16px; font-size: 14px; color: #e0e0e0; outline: none; }
+        button { background: #ffffff; color: #0f0f0f; border: none; border-radius: 10px; padding: 12px 20px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .sonuc-kutu { display: none; background: #0f0f0f; border: 1px solid #2a2a2a; border-radius: 10px; padding: 14px 16px; margin-bottom: 32px; align-items: center; justify-content: space-between; gap: 12px; }
+        .gizli { display: none !important; }
+        .sonuc-url { font-size: 14px; color: #a0c4ff; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .bolum-baslik { font-size: 12px; font-weight: 600; color: #444; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+        .link-satir { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid #1f1f1f; }
+        .link-bilgi { flex: 1; overflow: hidden; }
+        .kisa { font-size: 14px; color: #a0c4ff; text-decoration: none; display: block; margin-bottom: 2px; }
+        .uzun { font-size: 12px; color: #444; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tiklama { font-size: 12px; color: #555; white-space: nowrap; }
+        .sil-btn { background: transparent; color: #555; border: 1px solid #2a2a2a; border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
+        .sil-btn:hover { color: #ff6b6b; border-color: #5a2a2a; }
+        .bos { font-size: 13px; color: #333; text-align: center; padding: 20px 0; }
+    </style>
+</head>
+<body>
 
-  async function kopyala() {
-    await navigator.clipboard.writeText(sonKisaUrl);
-    const btn = document.querySelector(".kopyala-btn");
-    if(btn) {
-      btn.textContent = "Kopyalandı";
-      setTimeout(() => btn.textContent = "Kopyala", 2000);
-    }
-  }
+    <div class="kart">
+        <h1>LinkShorter</h1>
+        <p class="alt-baslik">Uzun linkleri kısa ve paylaşılabilir hale getir.</p>
 
-  async function sil(kod) {
-    await fetch(`/sil/${kod}`, { method: "DELETE" });
-    listele();
-  }
-
-  async function listele() {
-    const liste = document.getElementById("liste");
-    if (!liste) return; // Hata almanı önleyen kritik kontrol
-
-    const res = await fetch("/api/linkler");
-    const linkler = await res.json();
-    const host = window.location.host;
-
-    if (linkler.length === 0) {
-      liste.innerHTML = '<div class="bos">Henüz link yok.</div>';
-      return;
-    }
-
-    liste.innerHTML = linkler.map(l => `
-      <div class="link-satir">
-        <div class="link-bilgi">
-          <a class="kisa" href="/${l.kisa_kod}" target="_blank">${host}/${l.kisa_kod}</a>
-          <span class="uzun">${l.uzun_url}</span>
+        <div class="input-grup">
+            <input type="text" id="url" placeholder="https://uzun-adres.com/..." />
+            <button onclick="kisalt()">Kısalt</button>
         </div>
-        <span class="tiklama">${l.tiklanma || 0} tık</span>
-        <button class="sil-btn" onclick="sil('${l.kisa_kod}')">Sil</button>
-      </div>
-    `).join("");
-  }
 
-  // Sayfa tamamen hazır olduğunda listeleme yap
-  document.addEventListener("DOMContentLoaded", listele);
-</script>
+        <div class="sonuc-kutu gizli" id="sonuc-kutu">
+            <a class="sonuc-url" id="sonuc-url" href="#" target="_blank"></a>
+            <button class="kopyala-btn" onclick="kopyala()">Kopyala</button>
+        </div>
+
+        <div class="bolum-baslik">Linkler</div>
+        <div id="liste"></div>
+    </div>
+
+    <script>
+        let sonKisaUrl = "";
+
+        async function kisalt() {
+            const urlInput = document.getElementById("url");
+            const url = urlInput.value.trim();
+            if (!url) return;
+
+            const res = await fetch("/kisalt", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url })
+            });
+
+            const veri = await res.json();
+            if (veri.hata) return alert(veri.hata);
+
+            sonKisaUrl = veri.kisa_url;
+            const kutu = document.getElementById("sonuc-kutu");
+            const link = document.getElementById("sonuc-url");
+            
+            if (kutu && link) {
+                kutu.classList.remove("gizli");
+                kutu.style.display = "flex";
+                link.href = sonKisaUrl;
+                link.textContent = sonKisaUrl;
+            }
+            urlInput.value = "";
+            listele();
+        }
+
+        async function kopyala() {
+            await navigator.clipboard.writeText(sonKisaUrl);
+            const btn = document.querySelector(".kopyala-btn");
+            if(btn) {
+                btn.textContent = "Kopyalandı";
+                setTimeout(() => btn.textContent = "Kopyala", 2000);
+            }
+        }
+
+        async function sil(kod) {
+            await fetch(`/sil/${kod}`, { method: "DELETE" });
+            listele();
+        }
+
+        async function listele() {
+            const liste = document.getElementById("liste");
+            if (!liste) return;
+
+            const res = await fetch("/api/linkler");
+            const linkler = await res.json();
+            const host = window.location.host;
+
+            if (linkler.length === 0) {
+                liste.innerHTML = '<div class="bos">Henüz link yok.</div>';
+                return;
+            }
+
+            liste.innerHTML = linkler.map(l => `
+                <div class="link-satir">
+                    <div class="link-bilgi">
+                        <a class="kisa" href="/${l.kisa_kod}" target="_blank">${host}/${l.kisa_kod}</a>
+                        <span class="uzun">${l.uzun_url}</span>
+                    </div>
+                    <span class="tiklama">${l.tiklanma || 0} tık</span>
+                    <button class="sil-btn" onclick="sil('${l.kisa_kod}')">Sil</button>
+                </div>
+            `).join("");
+        }
+
+        document.addEventListener("DOMContentLoaded", listele);
+    </script>
+</body>
+</html>
