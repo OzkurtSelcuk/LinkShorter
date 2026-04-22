@@ -16,7 +16,12 @@ app.post("/kisalt", (req, res) => {
 
   const kod = nanoid(6);
   linkler.unshift({ id: Date.now(), uzun_url: url, kisa_kod: kod, tiklanma: 0 });
-  res.json({ kisa_url: `https://${req.headers.host}/${kod}` });
+
+  // Render için dinamik protokol ve host tespiti
+  const protokol = req.headers['x-forwarded-proto'] || 'http';
+  const kisa_url = `${protokol}://${req.headers.host}/${kod}`;
+  
+  res.json({ kisa_url });
 });
 
 app.get("/api/linkler", (req, res) => {
@@ -35,4 +40,4 @@ app.get("/:kod", (req, res) => {
   res.redirect(link.uzun_url);
 });
 
-app.listen(port, () => console.log(`Sunucu çalışıyor: http://localhost:${port}`));
+app.listen(port, () => console.log(`Sunucu aktif: Port ${port}`));
