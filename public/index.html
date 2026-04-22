@@ -2,7 +2,8 @@
   let sonKisaUrl = "";
 
   async function kisalt() {
-    const url = document.getElementById("url").value.trim();
+    const urlInput = document.getElementById("url");
+    const url = urlInput.value.trim();
     if (!url) return;
 
     const res = await fetch("/kisalt", {
@@ -17,18 +18,24 @@
     sonKisaUrl = veri.kisa_url;
     const kutu = document.getElementById("sonuc-kutu");
     const link = document.getElementById("sonuc-url");
-    kutu.classList.remove("gizli");
-    link.href = sonKisaUrl;
-    link.textContent = sonKisaUrl;
-    document.getElementById("url").value = "";
+    
+    if (kutu && link) {
+      kutu.classList.remove("gizli");
+      kutu.style.display = "flex"; // Garantiye alalım
+      link.href = sonKisaUrl;
+      link.textContent = sonKisaUrl;
+    }
+    urlInput.value = "";
     listele();
   }
 
   async function kopyala() {
     await navigator.clipboard.writeText(sonKisaUrl);
     const btn = document.querySelector(".kopyala-btn");
-    btn.textContent = "Kopyalandı";
-    setTimeout(() => btn.textContent = "Kopyala", 2000);
+    if(btn) {
+      btn.textContent = "Kopyalandı";
+      setTimeout(() => btn.textContent = "Kopyala", 2000);
+    }
   }
 
   async function sil(kod) {
@@ -37,18 +44,17 @@
   }
 
   async function listele() {
+    const liste = document.getElementById("liste");
+    if (!liste) return; // Hata almanı önleyen kritik kontrol
+
     const res = await fetch("/api/linkler");
     const linkler = await res.json();
-    const liste = document.getElementById("liste");
+    const host = window.location.host;
 
     if (linkler.length === 0) {
       liste.innerHTML = '<div class="bos">Henüz link yok.</div>';
       return;
     }
-
-    // DÜZELTİLEN KISIM: localhost yazısı yerine window.location.host kullanıldı
-    const host = window.location.host;
-    const protokol = window.location.protocol;
 
     liste.innerHTML = linkler.map(l => `
       <div class="link-satir">
@@ -56,11 +62,12 @@
           <a class="kisa" href="/${l.kisa_kod}" target="_blank">${host}/${l.kisa_kod}</a>
           <span class="uzun">${l.uzun_url}</span>
         </div>
-        <span class="tiklama">${l.tiklama || 0} tık</span>
+        <span class="tiklama">${l.tiklanma || 0} tık</span>
         <button class="sil-btn" onclick="sil('${l.kisa_kod}')">Sil</button>
       </div>
     `).join("");
   }
 
-  listele();
+  // Sayfa tamamen hazır olduğunda listeleme yap
+  document.addEventListener("DOMContentLoaded", listele);
 </script>
